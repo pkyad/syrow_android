@@ -9,7 +9,6 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.support.v7.widget.Toolbar;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
@@ -31,7 +30,9 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 import in.cioc.syrow.R;
 import in.cioc.syrow.adapter.ChatRoomThreadAdapter;
@@ -39,6 +40,14 @@ import in.cioc.syrow.app.Config;
 import in.cioc.syrow.app.MyApplication;
 import in.cioc.syrow.model.Message;
 import in.cioc.syrow.model.User;
+
+import io.crossbar.autobahn.wamp.Client;
+import io.crossbar.autobahn.wamp.Session;
+import io.crossbar.autobahn.wamp.types.EventDetails;
+import io.crossbar.autobahn.wamp.types.ExitInfo;
+import io.crossbar.autobahn.wamp.types.SessionDetails;
+import io.crossbar.autobahn.wamp.types.Subscription;
+import io.crossbar.autobahn.wamp.types.TransportOptions;
 
 public class ChatRoomActivity extends AppCompatActivity {
 
@@ -103,7 +112,49 @@ public class ChatRoomActivity extends AppCompatActivity {
             }
         });
 
+
+
+
+
+
+
+
+
         fetchChatThread();
+
+        Session session;
+        Client client;
+        CompletableFuture<ExitInfo> exitInfoCompletableFuture;
+
+        session = new Session();
+        session.addOnJoinListener(this::demonstrateSubscribe);
+        client = new Client(session, "ws://wamp.cioc.in:8090/ws", "default");
+        exitInfoCompletableFuture = client.connect();
+
+
+    }
+
+    public void demonstrateSubscribe(Session session, SessionDetails details) {
+
+
+        CompletableFuture<Subscription> subFuture = session.subscribe("service.self" ,
+                this::onEvent);
+        subFuture.whenComplete((subscription, throwable) -> {
+            if (throwable == null) {
+                System.out.println("Subscribed to topic " + subscription.topic);
+                Toast.makeText(getApplicationContext(), "Subscribed", Toast.LENGTH_SHORT).show();
+            } else {
+                throwable.printStackTrace();
+            }
+        });
+    }
+
+    private void onEvent(List<Object> args, Map<String, Object> kwargs, EventDetails details) {
+        System.out.println(String.format("Got event: %s", args.get(0)));
+
+
+        // add a notification strip here
+
     }
 
 
