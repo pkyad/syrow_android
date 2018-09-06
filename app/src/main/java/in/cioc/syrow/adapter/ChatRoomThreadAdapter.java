@@ -11,8 +11,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
 
@@ -21,15 +21,11 @@ import java.net.URL;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.List;
-import java.util.Locale;
 import java.util.TimeZone;
 
 import in.cioc.syrow.R;
-import in.cioc.syrow.activity.FullscreenActivity;
 import in.cioc.syrow.activity.ViewPagerActivity;
 import in.cioc.syrow.model.Message;
 
@@ -45,14 +41,19 @@ public class ChatRoomThreadAdapter extends RecyclerView.Adapter<ChatRoomThreadAd
     private ArrayList<Message> messageArrayList;
 
     public class ViewHolder extends RecyclerView.ViewHolder {
-        TextView message, timestamp;
-        ImageView messageImage;
+        TextView message, docMessageTxt, timestamp;
+        ImageView messageImage, docMessageImage;
+        LinearLayout docMessage;
+
 
         public ViewHolder(View view) {
             super(view);
             message = itemView.findViewById(R.id.message);
             messageImage =  itemView.findViewById(R.id.message_image);
             timestamp = itemView.findViewById(R.id.timestamp);
+            docMessage = itemView.findViewById(R.id.doc_message);
+            docMessageTxt = itemView.findViewById(R.id.doc_message_text);
+            docMessageImage= itemView.findViewById(R.id.doc_message_image);
         }
     }
 
@@ -72,11 +73,11 @@ public class ChatRoomThreadAdapter extends RecyclerView.Adapter<ChatRoomThreadAd
         // view type is to identify where to render the chat message
         // left or right
         if (viewType == SELF) {
-            // self message
+            // others message
             itemView = LayoutInflater.from(parent.getContext())
                     .inflate(R.layout.chat_item_other, parent, false);
         } else {
-            // others message
+            // self message
             itemView = LayoutInflater.from(parent.getContext())
                     .inflate(R.layout.chat_item_self, parent, false);
         }
@@ -90,64 +91,83 @@ public class ChatRoomThreadAdapter extends RecyclerView.Adapter<ChatRoomThreadAd
 
         try {
 //            if (message.getMessage().equals("")||message.getMessage().equals("null")||message.getMessage()==null){
-                if (!(message.getAttachment().equals("")||message.getAttachment().equals("null")||message.getAttachment()==null)) {
-                    holder.message.setVisibility(View.GONE);
-                    holder.messageImage.setVisibility(View.VISIBLE);
-//                Uri uri = Uri.parse(message.getMessageImg());
-//                holder.messageImage.setImageURI(uri);
-                    Glide.with(mContext)
-                            .load(message.getAttachment())
-                            .into(holder.messageImage);
-                    holder.messageImage.setOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View view) {
-                            Intent intent = new Intent(mContext, ViewPagerActivity.class);
-                            intent.putExtra("position", imagePosition);
-                            intent.putExtra("imageUrl", message.getAttachment());
-                            mContext.startActivity(intent);
-                        }
-                    });
-                }
-            else {
-                if((message.getAttachmentType().equals("youtubeLink"))){
-                    holder.message.setVisibility(View.GONE);
-                    holder.messageImage.setVisibility(View.VISIBLE);
-//                    String[] id = message.getMessage().split("https://www.youtube.com/embed/");
-                    List<String> strings = Arrays.asList(message.getMessage().split("/"));
-                    String id = strings.set(strings.size() - 1,"");
-//                    if(message.getMessage().split("/") != null && message.getMessage().split("/").length > 0) {
-//                        id = message.getMessage().split("/")[message.getMessage().split("/").length - 1];
-//                    }
-                    Glide.with(mContext)
-                            .load("https://img.youtube.com/vi/"+id+"/0.jpg")
-                            .into(holder.messageImage);
-                    holder.messageImage.setOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View view) {
-                            Intent appIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("vnd.youtube:" + id));
-                            Intent webIntent = new Intent(Intent.ACTION_VIEW,
-                                    Uri.parse("http://www.youtube.com/watch?v=" + id));
-                            try {
-                                mContext.startActivity(appIntent);
-                            } catch (ActivityNotFoundException ex) {
-                                mContext.startActivity(webIntent);
+                if ( !(message.getPk() ==null) && !(message.getAttachment().equals("")||message.getAttachment().equals("null")||message.getAttachment().equals(null) )) {
+                    if ((message.getAttachmentType().equals("image"))) {
+                        holder.message.setVisibility(View.GONE);
+                        holder.docMessage.setVisibility(View.GONE);
+                        holder.messageImage.setVisibility(View.VISIBLE);
+                        Glide.with(mContext)
+                                .load(message.getAttachment())
+                                .into(holder.messageImage);
+                        holder.messageImage.setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(View view) {
+                                Intent intent = new Intent(mContext, ViewPagerActivity.class);
+                                intent.putExtra("position", imagePosition);
+                                intent.putExtra("imageUrl", message.getAttachment());
+                                mContext.startActivity(intent);
                             }
+                        });
+                    }
+                    if ((message.getAttachmentType().equals("application"))) {
+                        holder.message.setVisibility(View.GONE);
+                        holder.messageImage.setVisibility(View.GONE);
+                        holder.docMessage.setVisibility(View.VISIBLE);
+                        int index = message.getAttachment().lastIndexOf('/');
+                        String docFile = message.getAttachment().substring(index +1);
+                        String[] docName = docFile.split("_", 3);
+                        int indexType = docFile.lastIndexOf('.');
+                        String docType = docFile.substring(indexType +1);
+                        if (docType.equals("pdf")){
+                            holder.docMessageImage.setImageResource(R.drawable.picture_pdf);
                         }
-                    });
+                        if (docType.equals("docx")){
+                            holder.docMessageImage.setImageResource(R.drawable.word);
+                        }
+                        if (docType.equals("xlsx")){
+                            holder.docMessageImage.setImageResource(R.drawable.drive_file);
+                        }
+                        holder.docMessageTxt.setText(docName[2]);
+                        holder.docMessage.setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(message.getAttachment()));
+                                mContext.startActivity(browserIntent);
+                            }
+                        });
 
-                } else if (message.getMessage().contains("<p>")){
-                    holder.messageImage.setVisibility(View.GONE);
-                    holder.message.setVisibility(View.VISIBLE);
-                    ((ViewHolder) holder).message.setText(Html.fromHtml(message.getMessage(), Html.FROM_HTML_MODE_COMPACT));
-                }else{
-                    holder.messageImage.setVisibility(View.GONE);
-                    holder.message.setVisibility(View.VISIBLE);
-                    ((ViewHolder) holder).message.setText(message.getMessage());
+                    }
+                } else {
+                    if ((message.getAttachmentType().equals("youtubeLink"))) {
+                        holder.message.setVisibility(View.GONE);
+                        holder.docMessage.setVisibility(View.GONE);
+                        holder.messageImage.setVisibility(View.VISIBLE);
+//                        String[] id = message.getMessage().split("https://www.youtube.com/embed/");
+                        int index = message.getMessage().lastIndexOf('/');
+                        String id = message.getMessage().substring(index +1);
+                        Glide.with(mContext)
+                                .load("https://img.youtube.com/vi/" + id + "/0.jpg")
+                                .into(holder.messageImage);
+                        holder.messageImage.setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(View view) {
+                                Intent appIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("vnd.youtube:" + id));
+                                Intent webIntent = new Intent(Intent.ACTION_VIEW,
+                                        Uri.parse("http://www.youtube.com/watch?v=" + id));
+                                try {
+                                    mContext.startActivity(appIntent);
+                                } catch (ActivityNotFoundException ex) {
+                                    mContext.startActivity(webIntent);
+                                }
+                            }
+                        });
+                    } else {
+                        holder.messageImage.setVisibility(View.GONE);
+                        holder.docMessage.setVisibility(View.GONE);
+                        holder.message.setVisibility(View.VISIBLE);
+                        ((ViewHolder) holder).message.setText(message.getMessage());
+                    }
                 }
-
-
-
-            }
 
             String timestamp = "";//getTimeStamp(message.getCreatedAt());
             SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSSSS'Z'");
@@ -196,6 +216,13 @@ public class ChatRoomThreadAdapter extends RecyclerView.Adapter<ChatRoomThreadAd
             }
         }catch (Exception e){
             e.printStackTrace();
+
+             if (message.getMessage().contains("<p>")) {
+                holder.messageImage.setVisibility(View.GONE);
+                 holder.docMessage.setVisibility(View.GONE);
+                holder.message.setVisibility(View.VISIBLE);
+                ((ViewHolder) holder).message.setText(Html.fromHtml(message.getMessage(), Html.FROM_HTML_MODE_COMPACT));
+            }
         }
 
     }

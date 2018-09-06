@@ -8,7 +8,7 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:gravity="center_horizontal"
-
+        android:elevation="2dp"
         >
         <LinearLayout
             android:layout_width="match_parent"
@@ -22,8 +22,9 @@
                 android:layout_height="wrap_content"
                 android:id="@+id/rating_bar"
                 android:numStars="5"
+                android:stepSize="1.0"
+                android:isIndicator="false"
                 android:theme="@style/RatingBar"
-
                 />
 
             <!--<TextView-->

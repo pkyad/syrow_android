@@ -34,6 +34,10 @@ public class MyPreferenceManager {
     private static final String KEY_USER_EMAIL = "user_email";
     private static final String KEY_NOTIFICATIONS = "notifications";
 
+    private String chatThreadPK = "chatPK";
+    private String STATUS = "chatStatus";
+
+
     // Constructor
     public MyPreferenceManager(Context context) {
         this._context = context;
@@ -81,6 +85,24 @@ public class MyPreferenceManager {
 
     public String getNotifications() {
         return pref.getString(KEY_NOTIFICATIONS, null);
+    }
+
+    public String getChatThreadPK() {
+        return pref.getString(chatThreadPK, "");
+    }
+
+    public void setChatThreadPK(String chatThread) {
+        editor.putString(chatThreadPK, chatThread);
+        editor.apply();
+    }
+
+    public boolean getStatus() {
+        return pref.getBoolean(STATUS, true);
+    }
+
+    public void setStatus(boolean status) {
+        editor.putBoolean(STATUS, status);
+        editor.commit();
     }
 
     public void clear() {

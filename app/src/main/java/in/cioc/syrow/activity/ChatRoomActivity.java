@@ -78,6 +78,7 @@ import in.cioc.syrow.Backend;
 import in.cioc.syrow.R;
 import in.cioc.syrow.adapter.ChatRoomThreadAdapter;
 import in.cioc.syrow.app.Config;
+import in.cioc.syrow.helper.MyPreferenceManager;
 import in.cioc.syrow.helper.Utility;
 import in.cioc.syrow.model.AdminChat;
 import in.cioc.syrow.model.ChatThread;
@@ -122,7 +123,8 @@ public class ChatRoomActivity extends AppCompatActivity {
 
     SharedPreferences sp;
     SharedPreferences.Editor spe;
-    String companyID = "1";
+    String companyID = "1", msgPk="";
+    MyPreferenceManager manager;
 
 
     @Override
@@ -135,6 +137,7 @@ public class ChatRoomActivity extends AppCompatActivity {
         this.context = context;
         sp = context.getSharedPreferences("registered_status", Context.MODE_PRIVATE);
         spe = sp.edit();
+        manager = new MyPreferenceManager(context);
 
         client = new AsyncHttpClient();
         choose=1;
@@ -148,21 +151,9 @@ public class ChatRoomActivity extends AppCompatActivity {
         userName = findViewById(R.id.user_name);
         userImage = findViewById(R.id.user_image);
         offLineAndOnLine = findViewById(R.id.off_on_line);
-//
-//        userImage.setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View v) {
-//                Toast.makeText(getBaseContext(),
-//                        "Name in ToolBar clicked",
-//                        Toast.LENGTH_LONG).show();
-//                userName.setText("User Name");
-//                offLineAndOnLine.setBackground(getResources().getDrawable(R.drawable.chat_bubble_green_circle));
-//            }
-//        });
 
         Intent intent = getIntent();
         chatRoomId = intent.getStringExtra("chat_room_id");
-//        String title = intent.getStringExtra("name");
 
 //        getSupportActionBar().setTitle("Syrow");
 //        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
@@ -326,10 +317,28 @@ public class ChatRoomActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 String feedback = feedbackText.getText().toString().trim();
-                Toast.makeText(context, "Feedback: "+ratingFeedback.getRating()+"\n"+feedback, Toast.LENGTH_SHORT).show();
-                resetUID();
-                ad.dismiss();
-                finish();
+                int rating = (int) ratingFeedback.getRating();
+                RequestParams threadParams = new RequestParams();
+                threadParams.put("customerRating", rating);
+                threadParams.put("customerFeedback",feedback);
+                client.patch(Backend.url+"/api/support/chatThread/"+manager.getChatThreadPK()+"/", threadParams, new JsonHttpResponseHandler() {
+                    @Override
+                    public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
+                        super.onSuccess(statusCode, headers, response);
+                        Toast.makeText(context, "Feedback: "+rating+"\n"+feedback, Toast.LENGTH_SHORT).show();
+                        Log.e("onSuccess", "chatThread- Feedback: "+rating+"\n"+feedback);
+                        resetUID();
+                        manager.clear();
+                        ad.dismiss();
+                        finish();
+                    }
+
+                    @Override
+                    public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
+                        super.onFailure(statusCode, headers, throwable, errorResponse);
+                        Toast.makeText(context, "onFailure- Feedback: "+statusCode, Toast.LENGTH_SHORT).show();
+                    }
+                });
             }
         });
         ad.show();
@@ -375,97 +384,89 @@ public class ChatRoomActivity extends AppCompatActivity {
 
 
         String agentName = args.get(2).toString();
+        String msgTyp = args.get(0).toString();
 
 //        getSupportActionBar().setTitle( agentName.substring(0, 1).toUpperCase() + agentName.substring(1));
         userName.setText(agentName.substring(0, 1).toUpperCase() + agentName.substring(1));
 
 
-        if (args.get(0).toString().equals("M") || args.get(0).toString().equals("ML")){
-            try {
-                User user = new User( ((LinkedHashMap.Entry <String ,Object> )argsMap[4]).getValue().toString() , "Agent", null);
-            }catch(Exception e){
-                e.printStackTrace();
-            }
+        try{
+            if (msgTyp.equals("M") || msgTyp.equals("ML")){
+                try {
+                    User user = new User( ((LinkedHashMap.Entry <String ,Object> )argsMap[4]).getValue().toString() , "Agent", null);
+                }catch(Exception e){
+                    e.printStackTrace();
+                }
 
+                String msgPK = ((LinkedHashMap.Entry <String ,Object> )argsMap[6]).getValue().toString();
 
-            Message message = new Message();
-            message.setPk(((LinkedHashMap.Entry <String ,Object> )argsMap[5]).getValue().toString());
-            message.setUser(((LinkedHashMap.Entry <String ,Object> )argsMap[4]).getValue().toString());
-            message.setSentByAgent(true);
-
-            try{
-                message.setMessage(((LinkedHashMap.Entry <String ,Object> )argsMap[6]).getValue().toString());
-            }catch (Exception e){
-                e.printStackTrace();
-            }
-
-            message.setCreated(((LinkedHashMap.Entry <String ,Object> )argsMap[1]).getValue().toString());
-
-            try{
-                message.setAttachment(((LinkedHashMap.Entry <String ,Object> )argsMap[7]).getValue().toString());
-            }catch (Exception e){
-                e.printStackTrace();
-            }
-
-            try{
-                message.setAttachmentType(((LinkedHashMap.Entry <String ,Object> )argsMap[2]).getValue().toString());
-            }catch (Exception e){
-                e.printStackTrace();
-            }
-
-            messageArrayList.add(message);
-
-
-            mAdapter.notifyDataSetChanged();
-            if (mAdapter.getItemCount() > 1) {
-                recyclerView.getLayoutManager().smoothScrollToPosition(recyclerView, null, mAdapter.getItemCount() - 1);
-            }
-
-            try {
-                Uri notification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-                Ringtone r = RingtoneManager.getRingtone(getApplicationContext(), notification);
-                r.play();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }else{
-
-            //http://syrow.cioc.in/api/support/supportChat/334/
-
-            client.get(Backend.url+"/api/support/supportChat/" + ((LinkedHashMap.Entry <String ,Object> )argsMap[0]).getValue().toString() + "/" , new JsonHttpResponseHandler() {
-                @Override
-                public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
-                    super.onSuccess(statusCode, headers, response);
-                    try {
+                client.get(Backend.url+"/api/support/supportChat/" + msgPK +"/", new JsonHttpResponseHandler(){
+                    @Override
+                    public void onSuccess(int statusCode, Header[] headers, JSONObject object) {
+                        super.onSuccess(statusCode, headers, object);
+                        User user = new User("self", "pkyad", null);
                         Message message = new Message();
-                        message.setPk(response.getString("pk"));
-                        message.setUser(response.getString("user"));
-                        message.setSentByAgent(response.getBoolean("sentByAgent"));
-                        message.setMessage(response.getString("message"));
-                        message.setAttachment(response.getString("attachment"));
-                        message.setCreated(response.getString("created"));
-                        message.setAttachmentType(response.getString("attachmentType"));
-                        messageArrayList.add(message);
-
-                        mAdapter.notifyDataSetChanged();
-                        if (mAdapter.getItemCount() > 1) {
-                            // scrolling to bottom of the recycler view
-                            recyclerView.getLayoutManager().smoothScrollToPosition(recyclerView, null, mAdapter.getItemCount() - 1);
+                        try {
+                            message.setPk(object.getString("pk"));
+                            message.setUser(object.getString("user"));
+                            message.setSentByAgent(object.getBoolean("sentByAgent"));
+                            message.setMessage(object.getString("message"));
+                            message.setAttachment(object.getString("attachment"));
+                            message.setCreated(object.getString("created"));
+                            message.setAttachmentType(object.getString("attachmentType"));
+                        } catch (JSONException e) {
+                            e.printStackTrace();
                         }
 
-                    } catch (JSONException e) {
-                        e.printStackTrace();
+                        messageArrayList.add(message);
+                        mAdapter.notifyDataSetChanged();
+                        if (mAdapter.getItemCount() > 1) {
+                            recyclerView.getLayoutManager().smoothScrollToPosition(recyclerView, null, mAdapter.getItemCount() - 1);
+                        }
                     }
-                }
-                @Override
-                public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
-                    super.onFailure(statusCode, headers, throwable, errorResponse);
-                    Toast.makeText(ChatRoomActivity.this, "onFailure "+thread, Toast.LENGTH_SHORT).show();
-                }
-            });
 
+                    @Override
+                    public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONArray errorResponse) {
+                        super.onFailure(statusCode, headers, throwable, errorResponse);
+                    }
+                });
+            }else{
+                //http://syrow.cioc.in/api/support/supportChat/334/
+                client.get(Backend.url+"/api/support/supportChat/" + ((LinkedHashMap.Entry <String ,Object> )argsMap[0]).getValue().toString() + "/" , new JsonHttpResponseHandler() {
+                    @Override
+                    public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
+                        super.onSuccess(statusCode, headers, response);
+                        try {
+                            Message message = new Message();
+                            message.setPk(response.getString("pk"));
+                            message.setUser(response.getString("user"));
+                            message.setSentByAgent(response.getBoolean("sentByAgent"));
+                            message.setMessage(response.getString("message"));
+                            message.setAttachment(response.getString("attachment"));
+                            message.setCreated(response.getString("created"));
+                            message.setAttachmentType(response.getString("attachmentType"));
+                            messageArrayList.add(message);
+
+                            mAdapter.notifyDataSetChanged();
+                            if (mAdapter.getItemCount() > 1) {
+                                // scrolling to bottom of the recycler view
+                                recyclerView.getLayoutManager().smoothScrollToPosition(recyclerView, null, mAdapter.getItemCount() - 1);
+                            }
+
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    @Override
+                    public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
+                        super.onFailure(statusCode, headers, throwable, errorResponse);
+                        Toast.makeText(ChatRoomActivity.this, "onFailure "+thread, Toast.LENGTH_SHORT).show();
+                    }
+                });
+            }
+        }catch (Exception e){
+            e.printStackTrace();
         }
-
     }
 
     @Override
@@ -627,13 +628,17 @@ public class ChatRoomActivity extends AppCompatActivity {
         RequestParams threadParams = new RequestParams();
         threadParams.put("company", companyID);
         threadParams.put("uid",millSec);
-        if (thread){
+
+        if (manager.getStatus()){
             client.post(Backend.url+"/api/support/chatThread/", threadParams, new JsonHttpResponseHandler() {
                 @Override
                 public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
                     super.onSuccess(statusCode, headers, response);
-                    thread = false;
+                    manager.setStatus(false);
+                    Log.e("onSuccess", "chatThread");
                     try {
+                        String pk = response.getString("pk");
+                        manager.setChatThreadPK(pk);
                         new ChatThread(response);
                     } catch (JSONException e) {
                         e.printStackTrace();
@@ -679,7 +684,6 @@ public class ChatRoomActivity extends AppCompatActivity {
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-
         if (resultCode == Activity.RESULT_OK) {
             if (requestCode == SELECT_FILE)
                 onSelectFromGalleryResult(data);
@@ -691,8 +695,7 @@ public class ChatRoomActivity extends AppCompatActivity {
     private void onCaptureImageResult(Intent data) {
         bitmap = (Bitmap) data.getExtras().get("data");
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 90, bytes);
-
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, bytes);
         File destination = new File(Environment.getExternalStorageDirectory(),
                 System.currentTimeMillis() + ".jpg");
 
@@ -707,8 +710,6 @@ public class ChatRoomActivity extends AppCompatActivity {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
-//        ivImage.setImageBitmap(thumbnail);
         sendMessage(destination.getAbsolutePath());
 
         base64 = bitmapToBase64(bitmap);
@@ -746,18 +747,14 @@ public class ChatRoomActivity extends AppCompatActivity {
             Log.e("onSelectFromGalleryResult",""+path);
             Toast.makeText(context, ""+path, Toast.LENGTH_SHORT).show();
         }
-//        ivImage.setImageBitmap(bm);
         base64 = bitmapToBase64(bitmap);
         sendMessage(path);
     }
-
-
 
     /**
      * Fetching all the messages of a single chat room
      * */
     private void fetchChatThread() {
-        //api/support/supportChat/?uid=1535435396312
         client.get(Backend.url+"/api/support/supportChat/?uid=" + millSec, new JsonHttpResponseHandler(){
             @Override
             public void onSuccess(int statusCode, Header[] headers, JSONArray response) {
@@ -775,8 +772,6 @@ public class ChatRoomActivity extends AppCompatActivity {
                         message.setCreated(object.getString("created"));
                         message.setAttachmentType(object.getString("attachmentType"));
                         messageArrayList.add(message);
-
-
                     } catch (JSONException e) {
                         e.printStackTrace();
                     }
@@ -792,34 +787,12 @@ public class ChatRoomActivity extends AppCompatActivity {
                 super.onFailure(statusCode, headers, throwable, errorResponse);
             }
         });
-
-//        for (int i = 0; i < 4; i++) {
-//
-//            User user = new User("pradeeep", "pkyad", null);
-//
-//            Message message = new Message();
-//            message.setId(Integer.toString(i) );
-//            message.setMessage("sample message " +  Integer.toString(i) );
-//            message.setCreatedAt("12:89 am");
-//            message.setUser(user);
-//
-//            messageArrayList.add(message);
-//        }
-
-//        User user = new User("self", "pkyad", null);
-//
-//        Message message = new Message();
-//        message.setId("dsds");
-//        message.setMessage("sample messadsadasge " );
-//        message.setCreatedAt("12:89 am");
-//        message.setUser(user);
-
-//        messageArrayList.add(message);
         mAdapter.notifyDataSetChanged();
         if (mAdapter.getItemCount() > 1) {
             recyclerView.getLayoutManager().smoothScrollToPosition(recyclerView, null, mAdapter.getItemCount() - 1);
         }
     }
+
     boolean res=false;
 
     @Override
