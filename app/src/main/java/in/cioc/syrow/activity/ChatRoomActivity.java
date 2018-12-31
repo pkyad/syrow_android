@@ -233,7 +233,8 @@ public class ChatRoomActivity extends AppCompatActivity {
         fetchChatThread();
         session = new Session();
         session.addOnJoinListener(this::demonstrateSubscribe);
-        client1 = new Client(session, "ws://wamp.cioc.in:8090/ws", "default");
+        //client1 = new Client(session, "ws://wamp.cioc.in:8090/ws", "default");
+        client1 = new Client(session, "ws://ws.syrow.com:8080/ws", "default");
         exitInfoCompletableFuture = client1.connect();
 
         if (Build.VERSION.SDK_INT >= 11) {
@@ -355,7 +356,7 @@ public class ChatRoomActivity extends AppCompatActivity {
     }
 
     public void demonstrateSubscribe(Session session, SessionDetails details) {
-        CompletableFuture<Subscription> subFuture = session.subscribe("service.support.chat." + millSec,
+        CompletableFuture<Subscription> subFuture = session.subscribe("uniqueKey.service.support.chat." + millSec,
                 this::onEvent);
         subFuture.whenComplete((subscription, throwable) -> {
             if (throwable == null) {
@@ -367,7 +368,7 @@ public class ChatRoomActivity extends AppCompatActivity {
         });
 
 
-        CompletableFuture<Registration> regFuture = session.register("service.support.heartbeat." + millSec , this::add2);
+        CompletableFuture<Registration> regFuture = session.register("uniqueKey.service.support.heartbeat." + millSec , this::add2);
         regFuture.thenAccept(registration ->
                 System.out.println("Successfully registered procedure: " + registration.procedure));
 
@@ -398,7 +399,7 @@ public class ChatRoomActivity extends AppCompatActivity {
                     e.printStackTrace();
                 }
 
-                String msgPK = ((LinkedHashMap.Entry <String ,Object> )argsMap[6]).getValue().toString();
+                String msgPK = ((LinkedHashMap.Entry <String ,Object> )argsMap[0]).getValue().toString();
 
                 client.get(Backend.url+"/api/support/supportChat/" + msgPK +"/", new JsonHttpResponseHandler(){
                     @Override
@@ -577,7 +578,7 @@ public class ChatRoomActivity extends AppCompatActivity {
                     message.setAttachmentType(object.getString("attachmentType"));
                     messageArrayList.add(message);
                     if (!(message.getMessage().equals("null"))){
-                        session.publish("service.support.agent", userId, "M", message);
+                        session.publish("uniqueKey.service.support.agent", userId, "M", message);
                     }else{
 
                         MediaMessage mm = new MediaMessage();
@@ -585,7 +586,7 @@ public class ChatRoomActivity extends AppCompatActivity {
                         mm.setTyp("image");
                         mm.setUser(object.getString("user"));
 
-                        session.publish("service.support.agent", userId, "MF", mm);
+                        session.publish("uniqueKey.service.support.agent", userId, "MF", mm);
                     }
 
 
