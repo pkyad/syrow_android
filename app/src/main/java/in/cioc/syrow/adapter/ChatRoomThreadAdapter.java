@@ -164,7 +164,12 @@ public class ChatRoomThreadAdapter extends RecyclerView.Adapter<ChatRoomThreadAd
                     } else {
                         holder.messageImage.setVisibility(View.GONE);
                         holder.docMessage.setVisibility(View.GONE);
-                        holder.message.setVisibility(View.VISIBLE);
+                        if(message.getMessage().contains("Feedback")){
+                            holder.message.setVisibility(View.GONE);
+                            holder.timestamp.setVisibility(View.GONE);
+                        }else {
+                            holder.message.setVisibility(View.VISIBLE);
+                        }
                         ((ViewHolder) holder).message.setText(message.getMessage());
                     }
                 }

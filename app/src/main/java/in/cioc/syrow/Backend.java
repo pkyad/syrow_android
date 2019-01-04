@@ -7,7 +7,7 @@ import com.loopj.android.http.AsyncHttpClient;
 import in.cioc.syrow.helper.MyPreferenceManager;
 
 public class Backend {
-//    public static String url = "http://192.168.1.124:8080/";
+   // public static String url = "http://192.168.0.26:8080/";
     public static String url = "https://app.syrow.com/";
     public Context context;
     MyPreferenceManager sessionManager;

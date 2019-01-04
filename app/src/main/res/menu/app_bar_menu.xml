@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/audioCall"
+        android:title="Audio"
+        android:icon="@drawable/audiocall"
+        app:showAsAction="always"
+        />
+    <item
+        android:visible="false"
+        app:showAsAction="always"
+        android:id="@+id/videoCall"
+        android:title="Video"
+        android:icon="@drawable/videocamera"
+        />
+
+</menu>

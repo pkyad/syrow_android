@@ -32,7 +32,11 @@ import android.support.v7.widget.Toolbar;
 import android.text.TextUtils;
 import android.util.Base64;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
+import android.webkit.WebView;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -51,6 +55,7 @@ import org.json.JSONObject;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -66,11 +71,13 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.StringTokenizer;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.CompletableFuture;
 
 import cz.msebera.android.httpclient.Header;
+import cz.msebera.android.httpclient.entity.InputStreamEntity;
 import cz.msebera.android.httpclient.entity.StringEntity;
 import cz.msebera.android.httpclient.message.BasicHeader;
 import cz.msebera.android.httpclient.protocol.HTTP;
@@ -99,10 +106,10 @@ import io.crossbar.autobahn.wamp.types.Subscription;
 public class ChatRoomActivity extends AppCompatActivity {
 
     private String TAG = ChatRoomActivity.class.getSimpleName();
-    Session session;
+    static Session session;
     Client client1;
     CompletableFuture<ExitInfo> exitInfoCompletableFuture;
-    private String chatRoomId, path, base64="", userChooseTask, millSec;
+    public static String chatRoomId, path, base64="", userChooseTask, millSec;
     private RecyclerView recyclerView;
     private ChatRoomThreadAdapter mAdapter;
     private ArrayList<Message> messageArrayList;
@@ -113,8 +120,9 @@ public class ChatRoomActivity extends AppCompatActivity {
     private ImageView btnSend, btnAttach, userImage;
     private AsyncHttpClient client;
     boolean thread = true;
+    private static final int READ_REQUEST_CODE = 42;
     private int REQUEST_CAMERA = 0, SELECT_FILE = 1,  choose;
-    Bitmap bitmap;
+    Bitmap bitmap,bitmap1;
     Context context;
     public static final long INTERVAL = 1000 * 25;
     private Handler mHandler = new Handler();
@@ -125,6 +133,10 @@ public class ChatRoomActivity extends AppCompatActivity {
     SharedPreferences.Editor spe;
     String companyID = "1", msgPk="";
     MyPreferenceManager manager;
+    String Rating_feedback="";
+    private Uri filepath;
+
+    public static String audio_vide0="";
 
 
     @Override
@@ -132,8 +144,6 @@ public class ChatRoomActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_chat_room);
         this.context = ChatRoomActivity.this;
-
-
         this.context = context;
         sp = context.getSharedPreferences("registered_status", Context.MODE_PRIVATE);
         spe = sp.edit();
@@ -297,6 +307,33 @@ public class ChatRoomActivity extends AppCompatActivity {
 //        resetUID();
     }
 
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+      MenuInflater inflater = getMenuInflater();
+      inflater.inflate(R.menu.app_bar_menu,menu);
+      return  true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.videoCall:
+                Toast.makeText(context, "video call ", Toast.LENGTH_SHORT).show();
+                audio_vide0="video";
+                startActivity(new Intent(getApplicationContext(),Audio_videoCall.class));
+                return true;
+            case R.id.audioCall:
+                audio_vide0="audio";
+                startActivity(new Intent(getApplicationContext(),Audio_videoCall.class));
+                Toast.makeText(context, "audio call", Toast.LENGTH_SHORT).show();
+                return  true;
+            default:
+                return  super.onOptionsItemSelected(item);
+        }
+
+   }
+
     public void showFeedbackForm(){
         View v = getLayoutInflater().inflate(R.layout.layout_feedback_rating, null, false);
         Button btnCancel = v.findViewById(R.id.action_btn_cancel);
@@ -310,6 +347,17 @@ public class ChatRoomActivity extends AppCompatActivity {
         btnCancel.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                Message message = new Message();
+
+                message.setUid(millSec);
+                message.setSentByAgent(true);
+                message.setMessage("Chat has been closed");
+                messageArrayList.add(message);
+                mAdapter.notifyDataSetChanged();
+                if (!(message.getMessage().equals("null"))){
+                    session.publish("uniqueKey.service.support.agent", millSec, "M", message);
+                }
+                manager.clear();
                 ad.dismiss();
                 finish();
             }
@@ -322,24 +370,64 @@ public class ChatRoomActivity extends AppCompatActivity {
                 RequestParams threadParams = new RequestParams();
                 threadParams.put("customerRating", rating);
                 threadParams.put("customerFeedback",feedback);
-                client.patch(Backend.url+"/api/support/chatThread/"+manager.getChatThreadPK()+"/", threadParams, new JsonHttpResponseHandler() {
+                threadParams.put("status","closed");
+                Rating_feedback = "Feedback : "+feedback+"\n Rating : "+rating;
+               // Toast.makeText(getApplicationContext(), Rating_feedback, Toast.LENGTH_SHORT).show();
+               // manager.clear();
+                ad.dismiss();
+                inputMessage.setEnabled(false);
+                btnAttach.setVisibility(View.GONE);
+
+                Message message = new Message();
+
+                message.setUid(millSec);
+                message.setSentByAgent(true);
+                message.setMessage("Chat has been closed\n\n Rating : "+rating+"\n FeedBack :"+feedback);
+                messageArrayList.add(message);
+                mAdapter.notifyDataSetChanged();
+                if (!(message.getMessage().equals("null"))){
+                    session.publish("uniqueKey.service.support.agent", millSec, "M", message);
+                }
+
+                finish();
+                RequestParams params= new RequestParams();
+                params.put("message", Rating_feedback);
+                params.put("sentByAgent", false);
+                params.put("uid", millSec);
+                client.post(Backend.url+"/api/support/supportChat/", params, new JsonHttpResponseHandler(){
                     @Override
-                    public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
-                        super.onSuccess(statusCode, headers, response);
-                        Toast.makeText(context, "Feedback: "+rating+"\n"+feedback, Toast.LENGTH_SHORT).show();
-                        Log.e("onSuccess", "chatThread- Feedback: "+rating+"\n"+feedback);
-                        resetUID();
-                        manager.clear();
-                        ad.dismiss();
-                        finish();
+                    public void onSuccess(int statusCode, Header[] headers, JSONObject object) {
+                       Log.e("feedback","feedback saved");
                     }
 
                     @Override
                     public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
                         super.onFailure(statusCode, headers, throwable, errorResponse);
-                        Toast.makeText(context, "onFailure- Feedback: "+statusCode, Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getApplicationContext(), "JSONObject error: " + statusCode, Toast.LENGTH_SHORT).show();
+
                     }
                 });
+//chatThread post call
+                client.patch(Backend.url+"/api/support/chatThread/"+manager.getChatThreadPK()+"/", threadParams, new JsonHttpResponseHandler() {
+                    @Override
+                    public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
+                        super.onSuccess(statusCode, headers, response);
+                        Toast.makeText(context, "Feedback:updated "+rating+"\n"+feedback, Toast.LENGTH_SHORT).show();
+                        Log.e("onSuccess", "chatThread- Feedback: "+rating+"\n"+feedback);
+                        resetUID();
+                        manager.clear();
+                        ad.dismiss();
+
+                    }
+
+                    @Override
+                    public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
+                        super.onFailure(statusCode, headers, throwable, errorResponse);
+                        Toast.makeText(context, "onFailure- Feedback: "+statusCode+" "+errorResponse, Toast.LENGTH_SHORT).show();
+                    }
+                });
+
+
             }
         });
         ad.show();
@@ -418,6 +506,7 @@ public class ChatRoomActivity extends AppCompatActivity {
                         } catch (JSONException e) {
                             e.printStackTrace();
                         }
+
 
                         messageArrayList.add(message);
                         mAdapter.notifyDataSetChanged();
@@ -511,6 +600,7 @@ public class ChatRoomActivity extends AppCompatActivity {
         View v = getLayoutInflater().inflate(R.layout.layout_gallery_and_camera, null, false);
         ImageView btnCamera = v.findViewById(R.id.btn_camera);
         ImageView btnGallery = v.findViewById(R.id.btn_gallery);
+        ImageView btnDocument = v.findViewById(R.id.document);
 
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
         builder.setView(v);
@@ -529,6 +619,14 @@ public class ChatRoomActivity extends AppCompatActivity {
                 ad.dismiss();
             }
         });
+        btnDocument.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                documentIntent();
+                ad.dismiss();
+            }
+
+        });
         ad.show();
     }
 
@@ -539,20 +637,35 @@ public class ChatRoomActivity extends AppCompatActivity {
      * */
 
     private void sendMessage(String msg) {
-        final String message = this.inputMessage.getText().toString().trim();
-        this.inputMessage.setText("");
+        String message="";
+        if(Rating_feedback.equals("")){
+             message = this.inputMessage.getText().toString().trim();
+            this.inputMessage.setText("");
+        }else {
+             message = Rating_feedback;
+            this.inputMessage.setText("");
+        }
+
         RequestParams params = new RequestParams();
         if (msg.equals("")) {
             if (TextUtils.isEmpty(message)) {
-                Toast.makeText(getApplicationContext(), "Enter a message", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getApplicationContext(), "Enter a message ", Toast.LENGTH_SHORT).show();
                 return;
             }
-
-            params.put("message", message);
-            params.put("sentByAgent", false);
-            params.put("uid", millSec);
-        } else {
-            if (bitmap!=null) {
+            else if(message.contains("www.youtube.com")){
+                String youtube[] = message.split("=");
+                message="https://www.youtube.com/embed/"+youtube[1];
+                params.put("message", message);
+                params.put("sentByAgent", false);
+                params.put("attachmentType", "youtubeLink");
+                params.put("uid", millSec);
+            }else {
+                params.put("message", message);
+                params.put("sentByAgent", false);
+                params.put("uid", millSec);
+            }
+        }
+        else if (bitmap!=null) {
                 ByteArrayOutputStream output = new ByteArrayOutputStream();
                 bitmap.compress(Bitmap.CompressFormat.JPEG, 100, output);
                 byte[] image = output.toByteArray();
@@ -560,8 +673,19 @@ public class ChatRoomActivity extends AppCompatActivity {
                 params.put("sentByAgent", false);
                 params.put("attachmentType", "image");
                 params.put("uid", millSec);
-            }
-        }
+            } else if (bitmap1!=null) {
+                    ByteArrayOutputStream output = new ByteArrayOutputStream();
+                    bitmap1.compress(Bitmap.CompressFormat.JPEG, 100, output);
+                    byte[] image = output.toByteArray();
+                    params.put("attachment", new ByteArrayInputStream(image), msg);
+                    params.put("sentByAgent", false);
+                    params.put("attachmentType", "application");
+                    params.put("uid", millSec);
+                }
+
+
+
+
         client.post(Backend.url+"/api/support/supportChat/", params, new JsonHttpResponseHandler(){
             @Override
             public void onSuccess(int statusCode, Header[] headers, JSONObject object) {
@@ -585,7 +709,6 @@ public class ChatRoomActivity extends AppCompatActivity {
                         mm.setFilePk(object.getString("pk"));
                         mm.setTyp("image");
                         mm.setUser(object.getString("user"));
-
                         session.publish("uniqueKey.service.support.agent", userId, "MF", mm);
                     }
 
@@ -613,6 +736,8 @@ public class ChatRoomActivity extends AppCompatActivity {
                         // scrolling to bottom of the recycler view
                         recyclerView.getLayoutManager().smoothScrollToPosition(recyclerView, null, mAdapter.getItemCount() - 1);
                     }
+
+
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
@@ -664,7 +789,8 @@ public class ChatRoomActivity extends AppCompatActivity {
                     else if(userChooseTask.equals("Choose from Library"))
                         galleryIntent();
                 } else {
-                    //code for deny
+                    documentIntent();
+                    Log.e("permisision","document");
                 }
                 break;
         }
@@ -672,9 +798,19 @@ public class ChatRoomActivity extends AppCompatActivity {
 
     private void galleryIntent() {
         Intent intent = new Intent();
-        intent.setType("image/*");
+       intent.setType("image/*");
+       intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE,true);
         intent.setAction(Intent.ACTION_GET_CONTENT);//
         startActivityForResult(Intent.createChooser(intent, "Select File"),SELECT_FILE);
+    }
+    private  void documentIntent(){
+        Intent intent = new Intent();
+        intent.setAction(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("application/*");
+        startActivityForResult(Intent.createChooser(intent,"Select document"),READ_REQUEST_CODE);
+
+
     }
 
     private void cameraIntent() {
@@ -686,11 +822,26 @@ public class ChatRoomActivity extends AppCompatActivity {
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (resultCode == Activity.RESULT_OK) {
-            if (requestCode == SELECT_FILE)
+            if (requestCode == SELECT_FILE){
                 onSelectFromGalleryResult(data);
+            Log.e("onActivity result", "document gallery");
+        }
             else if (requestCode == REQUEST_CAMERA)
                 onCaptureImageResult(data);
+        }else if(requestCode == READ_REQUEST_CODE){
+           // onCaptureDocumentFormat(data);
+            filepath = data.getData();
         }
+    }
+    public  void onCaptureDocumentFormat(Intent data){
+       /*bitmap1 = (Bitmap) data.getExtras().get("data");
+        path = data.getData().getPath();
+        sendMessage(path);
+        base64 = bitmapToBase64(bitmap1);
+        Log.e("onSelectFromGalleryResult",""+path);
+        Toast.makeText(context, ""+path, Toast.LENGTH_SHORT).show();*/
+
+
     }
 
     private void onCaptureImageResult(Intent data) {
@@ -798,6 +949,7 @@ public class ChatRoomActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
+
         showFeedbackForm();
         if (res)
         super.onBackPressed();
