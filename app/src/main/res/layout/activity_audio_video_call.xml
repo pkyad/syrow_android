@@ -5,19 +5,22 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".activity.Audio_videoCall">
-    <WebView
-        android:layout_width="match_parent"
-        android:layout_height="400dp"
-        android:id="@+id/Audio_Video"></WebView>
+
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center">
-        <ImageView
-            android:id="@+id/cancel_Call"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        >
+        <WebView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:id="@+id/Audio_Video">
 
-            android:background="@drawable/ic_remove_circle_black_24dp"
+        </WebView>
+        <ImageView
+            android:layout_gravity="center"
+            android:id="@+id/cancel_Call"
+            android:background="@drawable/telephone"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content" />
     </LinearLayout>

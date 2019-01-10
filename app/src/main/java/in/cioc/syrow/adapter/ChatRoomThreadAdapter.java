@@ -161,7 +161,19 @@ public class ChatRoomThreadAdapter extends RecyclerView.Adapter<ChatRoomThreadAd
                                 }
                             }
                         });
-                    } else {
+                    }else if(message.getAttachmentType().equals("video")){
+                        holder.message.setVisibility(View.GONE);
+                        holder.docMessage.setVisibility(View.GONE);
+                        holder.messageImage.setVisibility(View.GONE);
+
+                    }else if(message.getAttachmentType().equals("audio")){
+                        holder.message.setVisibility(View.GONE);
+                        holder.docMessage.setVisibility(View.GONE);
+                        holder.messageImage.setVisibility(View.GONE);
+
+                    }
+
+                    else {
                         holder.messageImage.setVisibility(View.GONE);
                         holder.docMessage.setVisibility(View.GONE);
                         if(message.getMessage().contains("Feedback")){

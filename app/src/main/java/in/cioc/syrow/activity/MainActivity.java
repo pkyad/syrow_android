@@ -29,13 +29,16 @@ public class MainActivity extends AppCompatActivity {
                    &&checkSelfPermission(Manifest.permission.CAMERA)==PackageManager.PERMISSION_GRANTED
                    &&checkSelfPermission(Manifest.permission.RECORD_AUDIO)==PackageManager.PERMISSION_GRANTED
                    &&checkSelfPermission(Manifest.permission.CALL_PHONE)==PackageManager.PERMISSION_GRANTED
+                   &&checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE)==PackageManager.PERMISSION_GRANTED
+                   &&checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)==PackageManager.PERMISSION_GRANTED
+                   &&checkSelfPermission(Manifest.permission.CALL_PHONE)==PackageManager.PERMISSION_GRANTED
                    ){
                return  true;
            }else{
                ActivityCompat.requestPermissions(this, new String[]{
-                       Manifest.permission.CAMERA, Manifest.permission.CALL_PHONE ,
+                       Manifest.permission.CAMERA, Manifest.permission.CALL_PHONE,
                        Manifest.permission.MODIFY_AUDIO_SETTINGS , Manifest.permission.PROCESS_OUTGOING_CALLS,
-                       Manifest.permission.RECORD_AUDIO}, 1);
+                       Manifest.permission.RECORD_AUDIO,Manifest.permission.WRITE_EXTERNAL_STORAGE,Manifest.permission.READ_EXTERNAL_STORAGE}, 1);
                return false;
            }
        }else{

@@ -1,5 +1,6 @@
 package in.cioc.syrow.activity;
 
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -36,7 +37,13 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.webkit.ConsoleMessage;
+import android.webkit.PermissionRequest;
+import android.webkit.WebChromeClient;
+import android.webkit.WebMessage;
+import android.webkit.WebSettings;
 import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -59,8 +66,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.lang.reflect.Array;
+
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -71,34 +77,26 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.StringTokenizer;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.CompletableFuture;
 
 import cz.msebera.android.httpclient.Header;
-import cz.msebera.android.httpclient.entity.InputStreamEntity;
-import cz.msebera.android.httpclient.entity.StringEntity;
-import cz.msebera.android.httpclient.message.BasicHeader;
-import cz.msebera.android.httpclient.protocol.HTTP;
 import in.cioc.syrow.Backend;
 import in.cioc.syrow.R;
 import in.cioc.syrow.adapter.ChatRoomThreadAdapter;
 import in.cioc.syrow.app.Config;
 import in.cioc.syrow.helper.MyPreferenceManager;
 import in.cioc.syrow.helper.Utility;
-import in.cioc.syrow.model.AdminChat;
 import in.cioc.syrow.model.ChatThread;
 import in.cioc.syrow.model.MediaMessage;
 import in.cioc.syrow.model.Message;
 import in.cioc.syrow.model.User;
 import io.crossbar.autobahn.wamp.Client;
 import io.crossbar.autobahn.wamp.Session;
-import io.crossbar.autobahn.wamp.messages.Publish;
 import io.crossbar.autobahn.wamp.types.EventDetails;
 import io.crossbar.autobahn.wamp.types.ExitInfo;
 import io.crossbar.autobahn.wamp.types.InvocationDetails;
-import io.crossbar.autobahn.wamp.types.Publication;
 import io.crossbar.autobahn.wamp.types.Registration;
 import io.crossbar.autobahn.wamp.types.SessionDetails;
 import io.crossbar.autobahn.wamp.types.Subscription;
@@ -137,6 +135,15 @@ public class ChatRoomActivity extends AppCompatActivity {
     private Uri filepath;
 
     public static String audio_vide0="";
+    WebView webView;
+    File file;
+    String arr [];
+    ImageView call_Cancel;
+    String html;
+    String audioTrue="https://socket.syrow.com/" + ChatRoomActivity.millSec + "?audio_video=audio&windowColor=96231d&agent=true";
+    String videoTrue="https://socket.syrow.com/" + ChatRoomActivity.millSec + "?audio_video=video&windowColor=96231d&agent=true";
+    String iframe;
+    MenuItem register;
 
 
     @Override
@@ -303,31 +310,126 @@ public class ChatRoomActivity extends AppCompatActivity {
             }
 
         });
-
 //        resetUID();
+       // createWebView();
+
     }
+
+    private void createWebView() {
+        webView= findViewById(R.id.WebView_Syrow);
+        setUpWebViewDefaults(webView);
+        checkAudioVideo();
+        webView.setWebChromeClient(new WebChromeClient() {
+
+            public boolean onConsoleMessage(ConsoleMessage m) {
+                Log.d("getUserMedia, WebView", m.message() + " -- From line "
+                        + m.lineNumber() + " of "
+                        + m.sourceId());
+
+                return true;
+            }
+
+            @Override
+            public void onPermissionRequest(final PermissionRequest request) {
+
+                // getActivity().
+                ChatRoomActivity.this.runOnUiThread(new Runnable() {
+                    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+                    @Override
+                    public void run() {
+                        // Below isn't necessary, however you might want to:
+                        // 1) Check what the site is and perhaps have a blacklist
+                        // 2) Have a pop up for the user to explicitly give permission
+                        // if(request.getOrigin().toString().equals("https://marcusbelcher.github.io/") ||
+                        //     request.getOrigin().toString().equals("https://webrtc.github.io/")) {
+                        request.grant(request.getResources());
+                        //  } else {
+                        //   request.deny();
+                        // }
+                    }
+                });
+            }
+        });
+    }
+    private void setUpWebViewDefaults(WebView webView) {
+
+        WebSettings settings = webView.getSettings();
+        settings.setJavaScriptEnabled(true);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+            webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        }
+
+        settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
+        settings.setAllowContentAccess(true);
+        settings.setAllowFileAccessFromFileURLs(true);
+        settings.setAllowUniversalAccessFromFileURLs(true);
+        settings.setJavaScriptCanOpenWindowsAutomatically(true);
+        settings.setMediaPlaybackRequiresUserGesture(false);
+
+        // Enable remote debugging via chrome://inspect
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            WebView.setWebContentsDebuggingEnabled(true);
+        }
+
+        webView.clearCache(true);
+        webView.clearHistory();
+        webView.setWebViewClient(new WebViewClient());
+    }
+
+    public void checkAudioVideo() {
+        String uid=ChatRoomActivity.millSec;
+
+        if (ChatRoomActivity.audio_vide0.equals("audio")) {
+            html = "https://socket.syrow.com/"+uid+"?audio_video=audio&windowColor=96231d&agent=false";
+            //iframe ="<iframe id=\"iFrame1\" src=\"https://socket.syrow.com/"+uid+"?audio_video=audio&amp;windowColor=3465fc&amp;agent=false\" style=\"width: 50%; height: 50%; border: medium none;\" scrolling=\"no\" allowfullscreen=\"\" allow=\"geolocation; microphone; camera\"></iframe>";
+           // webView.loadData(iframe,"text/html","UTF-8");
+            webView.loadUrl(html);
+            webView.setVisibility(View.VISIBLE);
+            ChatRoomActivity.session.publish("uniqueKey.service.support.agent" , uid, "AC", arr, 1, audioTrue);
+
+        } else {
+            html = "https://socket.syrow.com/"+uid+"?audio_video=video&windowColor=96231d&agent=false";
+            // iframe ="<iframe id=\"iFrame1\" src=\"https://socket.syrow.com/"+uid+"?audio_video=video&amp;windowColor=3465fc&amp;agent=false\" style=\"width: 50%; height: 50%; border: medium none;\" scrolling=\"no\" allowfullscreen=\"\" allow=\"geolocation; microphone; camera\"></iframe>";
+            // webView.loadData(iframe,"text/html", "UTF-8");
+            webView.loadUrl(html);
+            webView.setVisibility(View.VISIBLE);
+            ChatRoomActivity.session.publish("uniqueKey.service.support.agent",uid, "VCS", arr, 1, videoTrue);
+        }
+    }
+
 
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
       MenuInflater inflater = getMenuInflater();
       inflater.inflate(R.menu.app_bar_menu,menu);
+      register= menu.findItem(R.id.cancelCallbtn);
       return  true;
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
+
         switch (item.getItemId()) {
             case R.id.videoCall:
                 Toast.makeText(context, "video call ", Toast.LENGTH_SHORT).show();
                 audio_vide0="video";
-                startActivity(new Intent(getApplicationContext(),Audio_videoCall.class));
+                createWebView();
+                register.setVisible(true);
+              //  startActivity(new Intent(getApplicationContext(),Audio_videoCall.class));
                 return true;
             case R.id.audioCall:
                 audio_vide0="audio";
-                startActivity(new Intent(getApplicationContext(),Audio_videoCall.class));
+                register.setVisible(true);
+                 createWebView();
+              //  startActivity(new Intent(getApplicationContext(),Audio_videoCall.class));
                 Toast.makeText(context, "audio call", Toast.LENGTH_SHORT).show();
                 return  true;
+            case R.id.cancelCallbtn:
+                register.setVisible(false);
+              //  webView.postWebMessage(new WebMessage("userleft"),Uri.parse(null));
+                webView.setVisibility(View.GONE);
             default:
                 return  super.onOptionsItemSelected(item);
         }
@@ -407,7 +509,7 @@ public class ChatRoomActivity extends AppCompatActivity {
 
                     }
                 });
-//chatThread post call
+            //chatThread post call
                 client.patch(Backend.url+"/api/support/chatThread/"+manager.getChatThreadPK()+"/", threadParams, new JsonHttpResponseHandler() {
                     @Override
                     public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
@@ -673,7 +775,7 @@ public class ChatRoomActivity extends AppCompatActivity {
                 params.put("sentByAgent", false);
                 params.put("attachmentType", "image");
                 params.put("uid", millSec);
-            } else if (bitmap1!=null) {
+            } else {
                     ByteArrayOutputStream output = new ByteArrayOutputStream();
                     bitmap1.compress(Bitmap.CompressFormat.JPEG, 100, output);
                     byte[] image = output.toByteArray();
@@ -807,8 +909,8 @@ public class ChatRoomActivity extends AppCompatActivity {
         Intent intent = new Intent();
         intent.setAction(Intent.ACTION_OPEN_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
-        intent.setType("application/*");
-        startActivityForResult(Intent.createChooser(intent,"Select document"),READ_REQUEST_CODE);
+        intent.setType("application/pdf");
+        startActivityForResult(Intent.createChooser(intent,"Select document"),SELECT_FILE);
 
 
     }
@@ -824,22 +926,27 @@ public class ChatRoomActivity extends AppCompatActivity {
         if (resultCode == Activity.RESULT_OK) {
             if (requestCode == SELECT_FILE){
                 onSelectFromGalleryResult(data);
+
             Log.e("onActivity result", "document gallery");
+
         }
             else if (requestCode == REQUEST_CAMERA)
                 onCaptureImageResult(data);
         }else if(requestCode == READ_REQUEST_CODE){
-           // onCaptureDocumentFormat(data);
+            onCaptureDocumentFormat(data);
             filepath = data.getData();
+            file =new File(String.valueOf(data.getData()));
+            Log.e("filepath",filepath.toString());
         }
     }
     public  void onCaptureDocumentFormat(Intent data){
-       /*bitmap1 = (Bitmap) data.getExtras().get("data");
+      /* bitmap1 = (Bitmap) data.getExtras().get("data");
         path = data.getData().getPath();
         sendMessage(path);
         base64 = bitmapToBase64(bitmap1);
         Log.e("onSelectFromGalleryResult",""+path);
         Toast.makeText(context, ""+path, Toast.LENGTH_SHORT).show();*/
+      file = new File(data.getData().getPath());
 
 
     }

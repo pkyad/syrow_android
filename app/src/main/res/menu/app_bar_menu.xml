@@ -2,17 +2,24 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
+        android:id="@+id/cancelCallbtn"
+        android:title="Cancel"
+        android:icon="@drawable/cut_call"
+        android:visible="false"
+        app:showAsAction="always"
+        />
+    <item
         android:id="@+id/audioCall"
         android:title="Audio"
         android:icon="@drawable/audiocall"
         app:showAsAction="always"
         />
     <item
-        android:visible="false"
+        android:visible="true"
         app:showAsAction="always"
         android:id="@+id/videoCall"
         android:title="Video"
-        android:icon="@drawable/videocamera"
+        android:icon="@drawable/facetimebutton"
         />
 
 </menu>

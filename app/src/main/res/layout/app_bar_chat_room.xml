@@ -7,6 +7,8 @@
     android:fitsSystemWindows="true"
     tools:context=".activity.ChatRoomActivity">
 
+
+
     <android.support.design.widget.AppBarLayout
         android:layout_height="wrap_content"
         android:layout_width="match_parent"
@@ -26,6 +28,7 @@
                 android:layout_height="40dp"
                 android:id="@+id/user_image"
                 android:src="@drawable/user_male" />
+
 
             <TextView
                 android:layout_width="wrap_content"
@@ -55,9 +58,15 @@
 
         </android.support.v7.widget.Toolbar>
 
-    </android.support.design.widget.AppBarLayout>
+      </android.support.design.widget.AppBarLayout>
 
     <include layout="@layout/content_chat_room" />
 
+    <WebView
+        android:paddingTop="50dp"
+        android:id="@+id/WebView_Syrow"
+        android:visibility="gone"
+        android:layout_width="match_parent"
+        android:layout_height="400dp"></WebView>
 
 </android.support.design.widget.CoordinatorLayout>
