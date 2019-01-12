@@ -36,6 +36,7 @@
             android:padding="10dp"
             android:textSize="14dp" />
 
+
         <ImageView
             android:id="@+id/message_image"
             android:layout_width="180dp"

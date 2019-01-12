@@ -437,6 +437,7 @@ public class ChatRoomActivity extends AppCompatActivity {
    }
 
     public void showFeedbackForm(){
+
         View v = getLayoutInflater().inflate(R.layout.layout_feedback_rating, null, false);
         Button btnCancel = v.findViewById(R.id.action_btn_cancel);
         Button btnSubmit = v.findViewById(R.id.action_btn_submit);
@@ -703,6 +704,8 @@ public class ChatRoomActivity extends AppCompatActivity {
         ImageView btnCamera = v.findViewById(R.id.btn_camera);
         ImageView btnGallery = v.findViewById(R.id.btn_gallery);
         ImageView btnDocument = v.findViewById(R.id.document);
+        ImageView btnAudio =v.findViewById(R.id.audioResource);
+        ImageView btnVideo = v.findViewById(R.id.videoResource);
 
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
         builder.setView(v);
@@ -728,6 +731,20 @@ public class ChatRoomActivity extends AppCompatActivity {
                 ad.dismiss();
             }
 
+        });
+        btnAudio.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                audioIntent();
+                ad.dismiss();
+            }
+        });
+        btnVideo.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                videoIntent();
+                ad.dismiss();
+            }
         });
         ad.show();
     }
@@ -775,7 +792,7 @@ public class ChatRoomActivity extends AppCompatActivity {
                 params.put("sentByAgent", false);
                 params.put("attachmentType", "image");
                 params.put("uid", millSec);
-            } else {
+            } else  {
                     ByteArrayOutputStream output = new ByteArrayOutputStream();
                     bitmap1.compress(Bitmap.CompressFormat.JPEG, 100, output);
                     byte[] image = output.toByteArray();
@@ -911,8 +928,20 @@ public class ChatRoomActivity extends AppCompatActivity {
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType("application/pdf");
         startActivityForResult(Intent.createChooser(intent,"Select document"),SELECT_FILE);
+    }
+    private void audioIntent(){
+        Intent intent = new Intent();
+        intent.setAction(Intent.ACTION_GET_CONTENT);
+        intent.setType("audio/*");
+        startActivityForResult(intent,12);
+    }
+    private void videoIntent(){
+        Intent intent = new Intent(Intent.ACTION_PICK,MediaStore.Video.Media.EXTERNAL_CONTENT_URI);
+        startActivityForResult(intent,21);
+    }
 
-
+    public void multipart(){
+        
     }
 
     private void cameraIntent() {
@@ -934,21 +963,36 @@ public class ChatRoomActivity extends AppCompatActivity {
                 onCaptureImageResult(data);
         }else if(requestCode == READ_REQUEST_CODE){
             onCaptureDocumentFormat(data);
-            filepath = data.getData();
-            file =new File(String.valueOf(data.getData()));
-            Log.e("filepath",filepath.toString());
+
+
+        }
+        else if(requestCode == 12){
+            onAudioSelect(data);
+            Log.e("audio Path",null);
+        }else if(requestCode == 21){
+            onVideoSelect(data);
+            Log.e("video path",null);
         }
     }
+
+    private void onVideoSelect(Intent data) {
+
+    }
+    private void onAudioSelect(Intent data){
+
+    }
+
+
     public  void onCaptureDocumentFormat(Intent data){
-      /* bitmap1 = (Bitmap) data.getExtras().get("data");
+       bitmap1 = (Bitmap) data.getExtras().get("data");
         path = data.getData().getPath();
         sendMessage(path);
         base64 = bitmapToBase64(bitmap1);
-        Log.e("onSelectFromGalleryResult",""+path);
-        Toast.makeText(context, ""+path, Toast.LENGTH_SHORT).show();*/
+        Log.e("onCaptureDocumentFormat",""+path);
+        Toast.makeText(context, ""+path, Toast.LENGTH_SHORT).show();
       file = new File(data.getData().getPath());
-
-
+      System.out.print(data.getData().getPath());
+      Log.e("document path", data.getData().getPath());
     }
 
     private void onCaptureImageResult(Intent data) {

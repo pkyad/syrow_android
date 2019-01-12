@@ -13,6 +13,7 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.VideoView;
 
 import com.bumptech.glide.Glide;
 
@@ -44,6 +45,7 @@ public class ChatRoomThreadAdapter extends RecyclerView.Adapter<ChatRoomThreadAd
         TextView message, docMessageTxt, timestamp;
         ImageView messageImage, docMessageImage;
         LinearLayout docMessage;
+
 
 
         public ViewHolder(View view) {

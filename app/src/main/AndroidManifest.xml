@@ -18,7 +18,7 @@
     <uses-feature android:name="android.hardware.microphone" android:required="true"/>
     <uses-permission android:name="android.webkit.PermissionRequest" />
     <uses-feature android:name="android.hardware.camera2.full" />
-
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
 
     <application
